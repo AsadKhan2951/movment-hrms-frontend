@@ -995,7 +995,7 @@ export default function EmployeeManagement() {
                 <Label>Email *</Label>
                 <Input
                   type="email"
-                  placeholder="john@movment.com"
+                  placeholder="john@movement.com"
                   value={newEmployee.email}
                   onChange={(e) => setNewEmployee((prev) => ({ ...prev, email: e.target.value }))}
                 />
