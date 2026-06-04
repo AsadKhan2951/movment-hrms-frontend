@@ -73,7 +73,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   };
 
   const menuItems = [
-    { icon: Home, label: "Flow Central", path: "/dashboard" },
+    { icon: Home, label: "Flow | Movment", path: "/dashboard" },
     { icon: Clock, label: "Attendance", path: "/attendance" },
     { icon: ClipboardList, label: "Leave Management", path: "/leave" },
     { icon: FolderKanban, label: "Projects", path: "/projects" },
@@ -91,7 +91,6 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const filteredMenuItems = menuItems.filter(item =>
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const logoSrc = theme === "dark" ? "/radflow-logo-white.png" : "/radflow-logo.png";
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -120,12 +119,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
         {/* Logo & Toggle */}
         <div className="p-4 border-b flex items-center justify-between">
           {!sidebarCollapsed && (
-            <img
-              src={logoSrc}
-              alt="Rad.flow"
-              className="h-8"
-              style={{ width: "115px", height: "61px" }}
-            />
+            <div className="text-sm font-semibold tracking-normal text-foreground">
+              Flow | Movment
+            </div>
           )}
           <Button
             variant="ghost"
@@ -222,12 +218,9 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <img
-            src={logoSrc}
-            alt="Rad.flow"
-            className="h-8"
-            style={{ width: "115px", height: "61px" }}
-          />
+          <div className="text-sm font-semibold tracking-normal text-foreground">
+            Flow | Movment
+          </div>
           <Button
             variant="ghost"
             size="icon"

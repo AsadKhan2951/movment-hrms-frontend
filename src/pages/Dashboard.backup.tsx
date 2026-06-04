@@ -201,7 +201,9 @@ export default function Dashboard() {
         {/* Logo & Toggle */}
         <div className="p-4 border-b flex items-center justify-between">
           {!sidebarCollapsed && (
-            <img src="/radflow-logo.png" alt="Rad.flow" className="h-8" style={{width: '50px'}} />
+            <div className="text-sm font-semibold tracking-normal text-foreground">
+              Flow | Movment
+            </div>
           )}
           <Button
             variant="ghost"
@@ -281,7 +283,9 @@ export default function Dashboard() {
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <img src="/radflow-logo.png" alt="Rad.flow" className="h-8" />
+          <div className="text-sm font-semibold tracking-normal text-foreground">
+            Flow | Movment
+          </div>
           <Button
             variant="ghost"
             size="icon"
