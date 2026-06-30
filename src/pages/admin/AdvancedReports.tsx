@@ -26,11 +26,12 @@ import {
 import { Redirect } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { format } from "date-fns";
 
 export default function AdvancedReports() {
   const { user } = useAuth();
   const [selectedReport, setSelectedReport] = useState("attendance-summary");
-  const [selectedMonth, setSelectedMonth] = useState("February 2026");
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "MMMM yyyy"));
 
   if (user && user.role !== "admin") {
     return <Redirect to="/dashboard" />;
@@ -74,27 +75,33 @@ export default function AdvancedReports() {
     "September 2026", "October 2026", "November 2026", "December 2026",
   ];
 
-  const { data: employeeData = [] } = trpc.employees.list.useQuery();
-  const employees = employeeData.filter((emp: any) => emp?.role === "user");
-  const { data: leaveRequests = [] } = trpc.admin.getLeaveRequests.useQuery();
-  const { data: timeEntries = [] } = trpc.admin.getTimeEntriesByRange.useQuery(() => {
+  const reportRange = useMemo(() => {
     const [monthName, yearStr] = selectedMonth.split(" ");
     const year = Number(yearStr);
     const monthIndex = months.findIndex(m => m.startsWith(monthName));
     const startDate = new Date(year, monthIndex, 1);
     const endDate = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
-    return { startDate, endDate } as const;
-  });
+    return { startDate, endDate };
+  }, [selectedMonth]);
+
+  const { data: employeeData = [] } = trpc.employees.list.useQuery();
+  const employees = employeeData.filter((emp: any) => emp?.role === "user");
+  const { data: leaveRequests = [] } = trpc.admin.getLeaveRequests.useQuery();
+  const { data: timeEntries = [] } = trpc.admin.getTimeEntriesByRange.useQuery(reportRange);
   const { data: employeeStatuses = [] } = trpc.admin.getEmployeeStatusSnapshot.useQuery();
 
   const daysInMonth = useMemo(() => {
-    const [monthName, yearStr] = selectedMonth.split(" ");
-    const year = Number(yearStr);
-    const monthIndex = months.findIndex(m => m.startsWith(monthName));
-    return new Date(year, monthIndex + 1, 0).getDate();
-  }, [selectedMonth]);
+    return reportRange.endDate.getDate();
+  }, [reportRange]);
+
+  const employeeMap = useMemo(() => {
+    return new Map(employees.map((emp: any) => [String(emp.id), emp]));
+  }, [employees]);
 
   const attendanceSummaryData = useMemo(() => {
+    const monthStart = reportRange.startDate;
+    const monthEnd = reportRange.endDate;
+
     return employees.map((emp: any) => {
       const empEntries = timeEntries.filter((e: any) => String(e.userId) === String(emp.id) && e.status !== "active");
       const presentDays = new Set(empEntries.map((e: any) => new Date(e.timeIn).toDateString())).size;
@@ -103,19 +110,59 @@ export default function AdvancedReports() {
         if (!l.startDate || !l.endDate) return sum;
         const start = new Date(l.startDate);
         const end = new Date(l.endDate);
-        return sum + (Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        const overlapStart = start > monthStart ? start : monthStart;
+        const overlapEnd = end < monthEnd ? end : monthEnd;
+        if (overlapStart > overlapEnd) return sum;
+        return sum + (Math.floor((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      }, 0);
+      const totalWorkingHours = empEntries.reduce((sum: number, e: any) => {
+        const hours = e.totalHours
+          ? Number(e.totalHours)
+          : e.timeOut
+            ? (new Date(e.timeOut).getTime() - new Date(e.timeIn).getTime()) / (1000 * 60 * 60)
+            : 0;
+        return sum + hours;
       }, 0);
       const absent = Math.max(daysInMonth - presentDays - leaveDays, 0);
       return {
+        employeeId: emp.employeeId || "-",
         employee: emp.name || emp.employeeId || "Employee",
         totalDays: daysInMonth,
         present: presentDays,
         absent,
         leaves: leaveDays,
         payableDays: presentDays + leaveDays,
+        totalWorkingHours: Number(totalWorkingHours.toFixed(2)),
       };
     });
-  }, [employees, timeEntries, leaveRequests, daysInMonth]);
+  }, [employees, timeEntries, leaveRequests, daysInMonth, reportRange]);
+
+  const attendanceTrailData = useMemo(() => {
+    return timeEntries
+      .map((entry: any) => {
+        const employee = employeeMap.get(String(entry.userId));
+        const timeIn = entry.timeIn ? new Date(entry.timeIn) : null;
+        const timeOut = entry.timeOut ? new Date(entry.timeOut) : null;
+        const totalHours = entry.totalHours
+          ? Number(entry.totalHours)
+          : timeIn && timeOut
+            ? (timeOut.getTime() - timeIn.getTime()) / (1000 * 60 * 60)
+            : 0;
+
+        return {
+          id: entry.id,
+          employee: employee?.name || employee?.employeeId || "Employee",
+          employeeId: employee?.employeeId || "-",
+          date: timeIn ? format(timeIn, "dd MMM yyyy") : "-",
+          clockIn: timeIn ? format(timeIn, "hh:mm a") : "-",
+          clockOut: timeOut ? format(timeOut, "hh:mm a") : "-",
+          totalHours: Number(totalHours.toFixed(2)),
+          status: entry.status || "-",
+          sortTime: timeIn ? timeIn.getTime() : 0,
+        };
+      })
+      .sort((a, b) => b.sortTime - a.sortTime);
+  }, [employeeMap, timeEntries]);
 
   const otAnalysisData = useMemo(() => {
     return employees.map((emp: any) => {
@@ -159,10 +206,12 @@ export default function AdvancedReports() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-3 font-semibold">Employee</th>
+                    <th className="text-left p-3 font-semibold">Employee ID</th>
                     <th className="text-right p-3 font-semibold">Total Days</th>
                     <th className="text-right p-3 font-semibold">Present</th>
                     <th className="text-right p-3 font-semibold">Absent</th>
                     <th className="text-right p-3 font-semibold">Leaves</th>
+                    <th className="text-right p-3 font-semibold">Working Hours</th>
                     <th className="text-right p-3 font-semibold">Payable Days</th>
                   </tr>
                 </thead>
@@ -170,15 +219,59 @@ export default function AdvancedReports() {
                   {attendanceSummaryData.map((row, idx) => (
                     <tr key={idx} className="border-b hover:bg-muted/50">
                       <td className="p-3 font-medium">{row.employee}</td>
+                      <td className="p-3 text-muted-foreground">{row.employeeId}</td>
                       <td className="p-3 text-right">{row.totalDays}</td>
                       <td className="p-3 text-right text-green-600">{row.present}</td>
                       <td className="p-3 text-right text-red-600">{row.absent}</td>
                       <td className="p-3 text-right text-blue-600">{row.leaves}</td>
+                      <td className="p-3 text-right">{row.totalWorkingHours}</td>
                       <td className="p-3 text-right font-semibold">{row.payableDays}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="pt-4">
+              <h3 className="font-semibold mb-3">Clock In / Clock Out Details</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-semibold">Employee</th>
+                      <th className="text-left p-3 font-semibold">Employee ID</th>
+                      <th className="text-left p-3 font-semibold">Date</th>
+                      <th className="text-left p-3 font-semibold">Clock In</th>
+                      <th className="text-left p-3 font-semibold">Clock Out</th>
+                      <th className="text-right p-3 font-semibold">Total Hours</th>
+                      <th className="text-left p-3 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceTrailData.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                          No attendance entries found for {selectedMonth}.
+                        </td>
+                      </tr>
+                    ) : (
+                      attendanceTrailData.map((row) => (
+                        <tr key={row.id} className="border-b hover:bg-muted/50">
+                          <td className="p-3 font-medium">{row.employee}</td>
+                          <td className="p-3 text-muted-foreground">{row.employeeId}</td>
+                          <td className="p-3">{row.date}</td>
+                          <td className="p-3">{row.clockIn}</td>
+                          <td className="p-3">{row.clockOut}</td>
+                          <td className="p-3 text-right">{row.totalHours}</td>
+                          <td className="p-3">
+                            <Badge variant="outline">{row.status}</Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
@@ -312,7 +405,7 @@ export default function AdvancedReports() {
     <AdminLayout title="Advanced Reports">
       <div className="space-y-6">
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => handleExport("excel")}>\
+          <Button variant="outline" onClick={() => handleExport("excel")}>
             <Download className="h-4 w-4 mr-2" />
             Export Excel
           </Button>
