@@ -83,12 +83,12 @@ export default function Login() {
           <div className="flex justify-center mb-4">
             <div className="text-center">
               <img
-                src="/radflow-logo-white.png"
-                alt="Flow"
-                className="mx-auto mb-3 h-12 w-auto object-contain"
+                src="/new-logo-v2.png"
+                alt="Now"
+                className="mx-auto mb-3 h-7 w-auto object-contain"
               />
               <div className="text-2xl font-semibold tracking-normal text-foreground">
-                Flow | Movement
+                Now | Movement
               </div>
               <div className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 HRMS Portal

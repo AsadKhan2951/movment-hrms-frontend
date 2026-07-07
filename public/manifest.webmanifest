@@ -1,7 +1,7 @@
 {
-  "name": "Flow | Movement HRMS Portal",
-  "short_name": "Flow",
-  "description": "Flow Movement HRMS Portal",
+  "name": "Now | Movement HRMS Portal",
+  "short_name": "Now",
+  "description": "Now Movement HRMS Portal",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -399,7 +399,7 @@ export default function Dashboard() {
   const maxOvertimeDate = format(new Date(), "yyyy-MM-dd");
 
   const menuItems = [
-    { icon: Home, label: "Flow | Movement", path: "/dashboard" },
+    { icon: Home, label: "Now | Movement", path: "/dashboard" },
     { icon: Clock, label: "Attendance", path: "/attendance" },
     { icon: ClipboardList, label: "Leave Management", path: "/leave" },
     { icon: FolderKanban, label: "Projects", path: "/projects" },
@@ -442,7 +442,7 @@ export default function Dashboard() {
         <div className="p-4 border-b flex items-center justify-between">
           {!sidebarCollapsed && (
             <div className="text-sm font-semibold tracking-normal text-foreground">
-              Flow | Movement
+              Now | Movement
             </div>
           )}
           <Button
@@ -520,7 +520,7 @@ export default function Dashboard() {
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="text-sm font-semibold tracking-normal text-foreground">
-            Flow | Movement
+            Now | Movement
           </div>
           <Button
             size="sm"
